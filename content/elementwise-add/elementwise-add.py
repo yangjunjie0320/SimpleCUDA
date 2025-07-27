@@ -1,29 +1,26 @@
 import os, sys, time
+pwd = os.path.dirname(os.path.abspath(__file__))
+
 from functools import partial
 from typing import Optional
 from typing import Callable
 
 import torch
-from torch.utils.cpp_extension import load
-
 torch.set_grad_enabled(False)
-
 os.environ["TORCH_CUDA_ARCH_LIST"] = "%s.%s" % (torch.cuda.get_device_capability())
 
-
-# Load the CUDA kernel as a python module
+from torch.utils.cpp_extension import load
 lib = load(
     name="lib",
-    sources=["elementwise-add.cu"],
+    sources=[os.path.join(pwd, "elementwise-add.cu")],
     extra_cuda_cflags=[
-        "-O3", '-lineinfo',
+        "-O3", "--use_fast_math",
         "-U__CUDA_NO_HALF_OPERATORS__",
         "-U__CUDA_NO_HALF_CONVERSIONS__",
         "-U__CUDA_NO_HALF2_OPERATORS__",
         "-U__CUDA_NO_BFLOAT16_CONVERSIONS__",
         "--expt-relaxed-constexpr",
         "--expt-extended-lambda",
-        "--use_fast_math",
     ],
     extra_cflags=["-std=c++17"],
 )

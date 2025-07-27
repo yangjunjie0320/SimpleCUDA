@@ -6,11 +6,6 @@
 #include <cassert>
 
 #define WARP_SIZE 32
-#define INT4(x) (*(int4*)&(x))
-#define FLOAT4(x) (*(float4*)&(x))
-#define HALF2(x) (*(half2*)&(x))
-#define LDST128BITS(x) (*(float4*)&(x))
-
 #define BLOCK_SIZE 256
 using TorchDtype = torch::Dtype;
 
