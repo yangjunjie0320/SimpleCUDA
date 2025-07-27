@@ -1,0 +1,15 @@
+channels:
+  - defaults
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - compilers
+  - cuda=12.6.0
+  - cmake
+  - ninja
+  - sysroot_linux-64=2.28
+  - pip:
+    - torch
+    - torchvision
+    - torchaudio

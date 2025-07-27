@@ -1,0 +1,5 @@
+CompileFlags: 
+  Add: [
+        "-I$CONDA_PREFIX/include",
+        "-I$(python -c 'import torch; print(torch.__path__[0] + \"/include/\")')",
+        ]
