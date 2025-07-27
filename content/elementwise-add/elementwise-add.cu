@@ -142,8 +142,7 @@ __global__ void elementwise_add_f16_8_kernel(const half* a, const half* b, half*
 
 template <typename element_t, TorchDtype torch_t, int batch_size,
           void (*kernel)(const element_t*, const element_t*, element_t*, int)>
-void generate_elementwise_add(const torch::Tensor& a, const torch::Tensor& b,
-                              const torch::Tensor& c) {
+void generate_elementwise_add(const torch::Tensor& a, const torch::Tensor& b, torch::Tensor& c) {
     const auto dim = a.dim();
     assert(dim == 2);
 
