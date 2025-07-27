@@ -33,20 +33,19 @@ def benchmark(
     num_warmup: int = 10,
     num_repeat: int = 1000,
 ):
-    y = torch.zeros_like(a)
+    c = torch.zeros_like(a)
     for _ in range(num_warmup):
-        f(a, b, y)
+        f(a, b, c)
 
     torch.cuda.synchronize()
     t0 = time.time()
 
     for _ in range(num_repeat):
-        f(a, b, y)
+        f(a, b, c)
     
     torch.cuda.synchronize()
     t1 = time.time()
-    dt = (t1 - t0) / num_repeat
-    return y, dt
+    return c, (t1 - t0) / num_repeat
 
 if __name__ == "__main__":
     dimension_list = [(1024, 1024), (2048, 2048), (4096, 4096)]

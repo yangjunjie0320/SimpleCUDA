@@ -155,6 +155,7 @@ void generate_elementwise_add(const torch::Tensor& a, const torch::Tensor& b, to
     assert(b.options().dtype() == torch_t);
     assert(b.size(0) == size0 && b.size(1) == size1);
     assert(c.options().dtype() == torch_t);
+    assert(c.size(0) == size0 && c.size(1) == size1);
 
     const auto block_size = BLOCK_SIZE / batch_size;
     const auto grid_size = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
