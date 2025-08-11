@@ -33,7 +33,7 @@ def benchmark(
     num_warmup: int = 10,
     num_repeat: int = 1000,
 ):
-    c = 0.0
+    c = torch.zeros(1, dtype=a.dtype, device=a.device)
     for _ in range(num_warmup):
         f(a, b, c)
 
@@ -49,11 +49,11 @@ def benchmark(
     return c, dt
 
 if __name__ == "__main__":
-    dimension_list = [(1024, 1024), (2048, 2048), (4096, 4096)]
+    dimension_list = [1024, 2048, 4096]
 
-    for d1, d2 in dimension_list:
+    for d1 in dimension_list:
         print("-" * 64)
-        print(f"d1 = {d1}, d2 = {d2}")
+        print(f"d1 = {d1}")
         
         a = torch.randn(d1).cuda().float().contiguous()
         b = torch.randn(d1).cuda().float().contiguous()
@@ -61,33 +61,14 @@ if __name__ == "__main__":
         res = []
         
         def f(a, b, c):
-            c = torch.dot(a, b)
-        ref, t = benchmark(f, a, b)
-        res.append(["torch.dot (f32)", t, 0.0, ref])
+            c *= 0.0
+            c += torch.dot(a, b)
+        ref, t = benchmark(f, a, b, num_repeat=100)
+        res.append(["torch.dot (f32)", t, 0.0, ref[0]])
 
-        f = lib.dot_product_f32_1
-        sol, t = benchmark(f, a, b)
-        res.append(["dot_product_f32_1", t, abs(ref - sol).max(), sol])
+        f = lib.dot_product_f32_1_v1
+        sol, t = benchmark(f, a, b, num_repeat=100)
+        res.append(["dot_product_f32_1_v1", t, abs(ref - sol).max(), sol[0]])
 
-        f = lib.dot_product_f32_4
-        sol, t = benchmark(f, a, b)
-        res.append(["dot_product_f32_4", t, abs(ref - sol).max(), sol])
-
-        a = torch.randn(d1).cuda().half().contiguous()
-        b = torch.randn(d1).cuda().half().contiguous()
-
-        def f(a, b, c):
-            c = torch.dot(a, b)
-        ref, t = benchmark(f, a, b)
-        res.append(["torch.dot (f16)", t, 0.0, ref])
-
-        f = lib.dot_product_f16_1
-        sol, t = benchmark(f, a, b)
-        res.append(["dot_product_f16_1", t, abs(ref - sol).max(), sol])
-        
-        f = lib.dot_product_f16_2
-        sol, t = benchmark(f, a, b)
-        res.append(["dot_product_f16_2", t, abs(ref - sol).max(), sol])
-
-        for n, t, e in res:
-            print(f"name: {n:>32}, time: {t: 10.2e} s, result: {e: 10.2e}, error: {e: 10.2e}")
+        for n, t, e, r in res:
+            print(f"name: {n:>32}, time: {t: 10.2e} s, result: {r: 10.2e}, error: {e: 10.2e}")
