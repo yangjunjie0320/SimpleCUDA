@@ -4,11 +4,7 @@ A CUDA learning project demonstrating efficient GPU kernel implementations with 
 
 ## Overview
 
-This project provides hands-on examples of CUDA programming, comparing different implementation approaches:
-
-1. PyTorch Internal Functions (when possible).
-2. Custom PyTorch Functions.
-3. Custom CUDA Kernels.
+This project provides hands-on examples of CUDA programming.
 
 ## Installation
 
@@ -24,16 +20,7 @@ conda env create -f environment.yml -n simple-cuda
 conda activate simple-cuda
 ```
 
-In order to help the compiler to find correct `libtorch` headers,
-```bash
-export CUDA_INCLUDE_DIRS=$CONDA_PREFIX/include/cuda/
-export CMAKE_PREFIX_PATH=$CONDA_PREFIX/include/
-
-export TORCH_HEADER_PATH=$(python -c "import torch; print(torch.__path__[0])")
-export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:$TORCH_HEADER_PATH
-```
-
-3. Verify `pytorch` installation:
+Verify `pytorch` installation:
 ```bash
 which python
 python -c "import torch; print(torch.__version__)"
@@ -41,9 +28,31 @@ python -c "import torch; print(torch.cuda.is_available())"
 python -c "import torch; print(torch.cuda.get_device_name(0))"
 ```
 
+3. In order to help the compiler to find correct `libtorch` headers,
+```bash
+export CUDA_HOME=$CONDA_PREFIX
+export CUDA_INCLUDE_DIRS=$CUDA_HOME/include/
+export CMAKE_PREFIX_PATH=$CONDA_PREFIX/include/
+
+export TORCH_HEADER_PATH=$(python -c "import torch; print(torch.__path__[0])")
+export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:$TORCH_HEADER_PATH
+
+export TORCH_CUDA_ARCH_LIST=$(python -c "import torch; p=torch.cuda.get_device_properties(0); print(f'{p.major}.{p.minor}')")
+```
+
+Build the project:
+```bash
+rm -rf build
+cmake -B build \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DCUDA_TOOLKIT_ROOT_DIR=$CONDA_PREFIX/targets/x86_64-linux \
+    -DTORCH_CUDA_ARCH_LIST=$TORCH_CUDA_ARCH_LIST
+cmake --build build
+```
+
 ## Usage
 
-Run the `elementwise-add` example:
+Run the `softmax` example:
 ```bash
-python content/elementwise-add/elementwise-add.py
+python content/softmax/run.py
 ```
