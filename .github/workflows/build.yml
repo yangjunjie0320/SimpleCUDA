@@ -14,30 +14,52 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Miniconda
-      uses: conda-incubator/setup-miniconda@v3
+    - name: Install CUDA Toolkit
+      uses: Jimver/cuda-toolkit@v0.2.29
+      id: cuda-toolkit
       with:
-        auto-update-conda: true
+        cuda: '12.5.0'
+        method: 'network'
+        sub-packages: '["nvcc", "cudart", "cublas", "curand", "cusparse", "cusolver", "cufft"]'
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
         python-version: '3.10'
-        environment-file: environment.yml
-        activate-environment: simple-cuda
+    
+    - name: Install PyTorch
+      run: |
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+    
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
     
     - name: Build project
       shell: bash
       run: |
-        export CUDA_HOME=$CONDA_PREFIX
-        export CUDA_INCLUDE_DIRS=$CUDA_HOME/include/
-        export CUDA_TOOLKIT_ROOT_DIR=$CONDA_PREFIX/targets/x86_64-linux
+        # Use CUDA from cuda-toolkit action
+        export CUDA_HOME=${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+        export PATH=$CUDA_HOME/bin:$PATH
+        export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
         
+        # Get PyTorch paths
         export TORCH_HEADER_PATH=$(python -c "import torch; print(torch.__path__[0])")
-        export CMAKE_PREFIX_PATH=$CONDA_PREFIX/include/:$TORCH_HEADER_PATH
+        export CMAKE_PREFIX_PATH=$(python -c "import sys; print(sys.prefix)")
         
         export TORCH_CUDA_ARCH_LIST=7.5
+        
+        echo "CUDA version: ${{ steps.cuda-toolkit.outputs.cuda }}"
+        echo "CUDA path: $CUDA_HOME"
+        echo "PyTorch path: $TORCH_HEADER_PATH"
+        nvcc -V
+        python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
         
         rm -rf build
         cmake -B build \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-          -DCUDA_TOOLKIT_ROOT_DIR=$CONDA_PREFIX/targets/x86_64-linux \
+          -DCUDA_TOOLKIT_ROOT_DIR=$CUDA_HOME \
           -DTORCH_CUDA_ARCH_LIST=$TORCH_CUDA_ARCH_LIST
         
         cmake --build build --parallel

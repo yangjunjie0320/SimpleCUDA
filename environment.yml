@@ -7,7 +7,6 @@ dependencies:
   - compilers
   - cmake
   - cuda-toolkit
-  - clang-tools
   - clang-format
   - pip:
     - torch
