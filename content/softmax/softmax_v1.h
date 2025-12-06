@@ -1,6 +1,7 @@
 __global__ void kernel_v1(float* out, const float* inp, size_t nrow, size_t ncol) {
     auto i = blockIdx.x;
-    if (i >= nrow) return;
+    if (i >= nrow)
+        return;
 
     const float* ai_ptr = inp + i * ncol;
     float* ci_ptr = out + i * ncol;

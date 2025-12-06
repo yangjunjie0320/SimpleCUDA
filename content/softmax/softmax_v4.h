@@ -2,7 +2,8 @@
 
 __global__ void kernel_v4(float* out, const float* inp, size_t nrow, size_t ncol) {
     auto i = blockIdx.x;
-    if (i >= nrow) return;
+    if (i >= nrow)
+        return;
 
     auto t = threadIdx.x * blockDim.y + threadIdx.y;
     auto stride = blockDim.x;
