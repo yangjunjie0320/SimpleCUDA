@@ -1,7 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-CMakeLists.txt
 compile_commands.json
 .clangd
 .clang-format

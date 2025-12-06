@@ -11,10 +11,10 @@
 
 #define WARP_SIZE 32
 namespace softmax {
-    #include "softmax_v1.cuh"
-    #include "softmax_v2.cuh"
-    #include "softmax_v3.cuh"
-    #include "softmax_v4.cuh"
+    #include "softmax_v1.h"
+    #include "softmax_v2.h"
+    #include "softmax_v3.h"
+    #include "softmax_v4.h"
 
     void kernel_cpu(float* out, const float* inp, const size_t nrow, const size_t ncol) {
         for (auto i = 0; i < nrow; i++) {
@@ -42,13 +42,9 @@ namespace softmax {
     }
 }
 
-#include "utils.cuh"
+#include "utils.h"
 
 int main() {
-    // printf("--------------------------------------------------\n");
-    // printf("%-10s %-12s %-12s %-12s\n", "N", "CPU (ms)", "V1 (ms)", "Error");
-    // printf("--------------------------------------------------\n");
-
     for (int nrow = 256; nrow <= 4096; nrow *= 2) {
         const int ncol = WARP_SIZE * 4;
         auto inp = torch::randn({nrow, ncol});

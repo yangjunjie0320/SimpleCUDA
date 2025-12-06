@@ -15,7 +15,7 @@ class BenchmarkResult {
             auto error = this->error.max().item<float>();
             
             if (cpu) {
-                printf("%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n", 
+                printf("\n%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n", 
                     "softmax_f32_cpu", nrow, time_cpu_ms, 0.0
                 );
             }
@@ -72,15 +72,26 @@ class BenchmarkResult {
             cudaMemcpy(inp_gpu, inp_cpu, mem_size, cudaMemcpyHostToDevice);
         
             // lambda function to launch the kernel
-            auto func = [&](float* out_gpu, const float* inp_gpu) {
-                this->kernel<<<this->grid_dim, this->block_dim, this->shared_mem_size>>>(
-                    out_gpu, inp_gpu, nrow, ncol
+            auto launch = [&](float* out_gpu, const float* inp_gpu) {
+                void* args[] = {
+                    (void*) &out_gpu,
+                    (void*) &inp_gpu,
+                    (void*) &nrow,
+                    (void*) &ncol
+                };
+                cudaLaunchKernel(
+                    (void*) this->kernel,
+                    this->grid_dim,
+                    this->block_dim,
+                    args,
+                    this->shared_mem_size,
+                    0  // stream
                 );
             };
     
             // Warmup
             for (size_t x = 0; x < warmup; x++) {
-                func(out_gpu, inp_gpu);
+                launch(out_gpu, inp_gpu);
             }
             cudaDeviceSynchronize();
         
@@ -91,7 +102,7 @@ class BenchmarkResult {
         
             cudaEventRecord(t0);
             for (size_t x = 0; x < repeat; x++) {
-                func(out_gpu, inp_gpu);
+                launch(out_gpu, inp_gpu);
             }
             cudaEventRecord(t1);
             cudaEventSynchronize(t1);
