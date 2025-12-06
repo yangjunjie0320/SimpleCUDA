@@ -32,9 +32,10 @@ python -c "import torch; print(torch.cuda.get_device_name(0))"
 ```bash
 export CUDA_HOME=$CONDA_PREFIX
 export CUDA_INCLUDE_DIRS=$CUDA_HOME/include/
-export CMAKE_PREFIX_PATH=$CONDA_PREFIX/include/
+export CUDA_TOOLKIT_ROOT_DIR=$CONDA_PREFIX/targets/x86_64-linux
 
 export TORCH_HEADER_PATH=$(python -c "import torch; print(torch.__path__[0])")
+export CMAKE_PREFIX_PATH=$CONDA_PREFIX/include/
 export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:$TORCH_HEADER_PATH
 
 export TORCH_CUDA_ARCH_LIST=$(python -c "import torch; p=torch.cuda.get_device_properties(0); print(f'{p.major}.{p.minor}')")
@@ -50,9 +51,13 @@ cmake -B build \
 cmake --build build
 ```
 
-## Usage
-
+## Run
 Run the `softmax` example:
 ```bash
-python content/softmax/run.py
+./build/softmax.x
+```
+
+Use `ncu` to profile the CUDA kernel:
+```bash
+ncu --target-processes all ./build/softmax.x
 ```

@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 CMakeLists.txt
 compile_commands.json
+.clangd
+.clang-format
 
 # C extensions
 *.so
