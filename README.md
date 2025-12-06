@@ -1,7 +1,6 @@
 # SimpleCUDA
 
 [![Code Format Check](https://github.com/yangjunjie0320/SimpleCUDA/actions/workflows/format-check.yml/badge.svg)](https://github.com/yangjunjie0320/SimpleCUDA/actions/workflows/format-check.yml)
-[![Build](https://github.com/yangjunjie0320/SimpleCUDA/actions/workflows/build.yml/badge.svg)](https://github.com/yangjunjie0320/SimpleCUDA/actions/workflows/build.yml)
 
 A CUDA learning project demonstrating efficient GPU kernel implementations with PyTorch integration.
 
