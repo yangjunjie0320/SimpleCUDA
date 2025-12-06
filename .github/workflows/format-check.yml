@@ -1,0 +1,62 @@
+name: Code Format Check
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install clang-format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format-15
+    
+    - name: Check code formatting
+      run: |
+        echo "Checking code formatting..."
+        
+        # Find all C++/CUDA files
+        FILES=$(find content -name "*.cu" -o -name "*.h" -o -name "*.cpp" -o -name "*.hpp" 2>/dev/null | sort)
+        
+        if [ -z "$FILES" ]; then
+          echo "No files to check"
+          exit 0
+        fi
+        
+        # Check formatting for all files
+        FAILED_FILES=()
+        for file in $FILES; do
+          if ! clang-format-15 --dry-run --Werror --style=file "$file" > /dev/null 2>&1; then
+            FAILED_FILES+=("$file")
+          fi
+        done
+        
+        # Report results
+        if [ ${#FAILED_FILES[@]} -eq 0 ]; then
+          echo "All files are properly formatted!"
+          exit 0
+        else
+          echo "Formatting errors found in ${#FAILED_FILES[@]} file(s):"
+          for file in "${FAILED_FILES[@]}"; do
+            echo "  - $file"
+          done
+          echo ""
+          echo "To fix, run:"
+          echo "  find content -name '*.cu' -o -name '*.h' | xargs clang-format -i"
+          echo ""
+          echo "Showing differences:"
+          for file in "${FAILED_FILES[@]}"; do
+            echo ""
+            echo "=== $file ==="
+            clang-format-15 --style=file "$file" | diff -u "$file" - || true
+          done
+          exit 1
+        fi
