@@ -8,6 +8,4 @@ dependencies:
   - cmake
   - cuda-toolkit
   - clang-format
-  - pip:
-    - torch
-    - torchvision
+  - armadillo

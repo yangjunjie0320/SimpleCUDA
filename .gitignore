@@ -4,6 +4,10 @@ __pycache__/
 compile_commands.json
 .clangd
 
+# CUDA profiling
+*.ncu-rep
+*.log
+
 # C extensions
 *.so
 *.dylib
@@ -53,10 +57,6 @@ coverage.xml
 
 # Rope
 .ropeproject
-
-# Django stuff:
-*.log
-*.pot
 
 CMakeCache.txt
 CMakeFiles
