@@ -1,0 +1,42 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          environment-name: simple-cuda
+          cache-environment: true
+
+      - name: Show toolchain versions
+        shell: bash -l {0}
+        run: |
+          micromamba run -n simple-cuda nvcc --version
+          micromamba run -n simple-cuda cmake --version
+
+      - name: Configure
+        shell: bash -l {0}
+        run: |
+          micromamba run -n simple-cuda cmake \
+            -S . \
+            -B build \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_CUDA_ARCHITECTURES=89
+
+      - name: Build
+        shell: bash -l {0}
+        run: |
+          micromamba run -n simple-cuda cmake --build build --parallel
