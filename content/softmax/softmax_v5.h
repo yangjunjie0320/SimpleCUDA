@@ -3,7 +3,7 @@
 template <int num_rows_per_access, int num_cols_per_thread>
 __global__ void kernel_v5(float* out, const float* inp, size_t nrow, size_t ncol) {
     float buff[num_rows_per_access][num_cols_per_thread];
-    
+
     // const auto lane_idx = threadIdx.x;
     // const auto warp_idx_in_block = threadIdx.y;
     // const auto num_warps_per_block = blockDim.y;
@@ -36,18 +36,18 @@ __global__ void kernel_v5(float* out, const float* inp, size_t nrow, size_t ncol
         float ai_max_in_warp[num_rows_per_access];
         float ai_sum_in_warp[num_rows_per_access];
 
-        #pragma unroll
+#pragma unroll
         for (auto ii = 0; ii < num_rows_per_access; ii++) {
             ai_max_in_thread[ii] = -INFINITY;
             ai_sum_in_thread[ii] = 0.0f;
         }
 
-        #pragma unroll
+#pragma unroll
         for (auto ii = 0; ii < num_rows_per_access; ii++) {
             auto i = i0 + ii;
             const auto ai_ptr = inp + i * ncol;
 
-            #pragma unroll
+#pragma unroll
             for (auto jj = 0; jj < num_cols_per_thread; jj++) {
                 auto j = idx_lane + jj * NUM_THREAD_IN_WARP;
                 const auto aij = ai_ptr[j];
@@ -56,11 +56,11 @@ __global__ void kernel_v5(float* out, const float* inp, size_t nrow, size_t ncol
             }
         }
 
-        #pragma unroll
+#pragma unroll
         for (auto ii = 0; ii < num_rows_per_access; ii++) {
             float ai_t_max = ai_max_in_thread[ii];
 
-            #pragma unroll
+#pragma unroll
             for (auto offset = NUM_THREAD_IN_WARP / 2; offset > 0; offset >>= 1) {
                 ai_t_max = fmaxf(ai_t_max, __shfl_down_sync(FULL, ai_t_max, offset));
             }
@@ -68,10 +68,9 @@ __global__ void kernel_v5(float* out, const float* inp, size_t nrow, size_t ncol
             ai_max_in_warp[ii] = __shfl_sync(FULL, ai_t_max, 0);
         }
 
-        #pragma unroll
+#pragma unroll
         for (auto ii = 0; ii < num_rows_per_access; ii++) {
-            
-            #pragma unroll
+#pragma unroll
             for (auto jj = 0; jj < num_cols_per_thread; jj++) {
                 float aij = buff[ii][jj];
                 float exp_aij = expf(aij - ai_max_in_warp[ii]);
@@ -81,18 +80,18 @@ __global__ void kernel_v5(float* out, const float* inp, size_t nrow, size_t ncol
             }
         }
 
-        #pragma unroll
+#pragma unroll
         for (auto ii = 0; ii < num_rows_per_access; ii++) {
             float ai_t_sum = ai_sum_in_thread[ii];
 
-            #pragma unroll
+#pragma unroll
             for (auto offset = NUM_THREAD_IN_WARP / 2; offset > 0; offset >>= 1) {
                 ai_t_sum += __shfl_down_sync(FULL, ai_t_sum, offset);
             }
             ai_sum_in_warp[ii] = __shfl_sync(FULL, ai_t_sum, 0);
         }
 
-        #pragma unroll
+#pragma unroll
         for (auto ii = 0; ii < num_rows_per_access; ii++) {
             auto i = i0 + ii;
             auto ai_sum_inv = 1.0f / ai_sum_in_warp[ii];
@@ -100,7 +99,7 @@ __global__ void kernel_v5(float* out, const float* inp, size_t nrow, size_t ncol
             if (i < nrow) {
                 float* ci_ptr = out + i * ncol;
 
-                #pragma unroll
+#pragma unroll
                 for (auto jj = 0; jj < num_cols_per_thread; jj++) {
                     auto j = idx_lane + jj * NUM_THREAD_IN_WARP;
                     float aij = buff[ii][jj];

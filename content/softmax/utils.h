@@ -18,13 +18,13 @@ class BenchmarkResult {
 
         if (cpu) {
             auto error = xt::amax(this->error_cpu)();
-            printf("\n%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n",
-                   "softmax_f32_cpu", nrow, time_cpu_ms, error);
+            printf("\n%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n", "softmax_f32_cpu",
+                   nrow, time_cpu_ms, error);
         }
         if (gpu) {
             auto error = xt::amax(this->error_gpu)();
-            printf("%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n",
-                   this->title, nrow, time_gpu_ms, error);
+            printf("%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n", this->title, nrow,
+                   time_gpu_ms, error);
         }
     }
 };
@@ -32,7 +32,7 @@ class BenchmarkResult {
 template <typename kernel_t>
 class KernelLaunchConfig {
   public:
-    kernel_t   kernel;
+    kernel_t kernel;
     const char* title;
     size_t warmup;
     size_t repeat;
@@ -40,36 +40,22 @@ class KernelLaunchConfig {
     dim3 grid_dim;
     size_t shared_mem_size;
 
-    KernelLaunchConfig(kernel_t kernel,
-                       const char* title,
-                       size_t warmup,
-                       size_t repeat,
-                       dim3 block_dim,
-                       dim3 grid_dim,
-                       size_t shared_mem_size)
-        : kernel(kernel)
-        , title(title)
-        , warmup(warmup)
-        , repeat(repeat)
-        , block_dim(block_dim)
-        , grid_dim(grid_dim)
-        , shared_mem_size(shared_mem_size) {}
+    KernelLaunchConfig(kernel_t kernel, const char* title, size_t warmup, size_t repeat,
+                       dim3 block_dim, dim3 grid_dim, size_t shared_mem_size)
+        : kernel(kernel), title(title), warmup(warmup), repeat(repeat), block_dim(block_dim),
+          grid_dim(grid_dim), shared_mem_size(shared_mem_size) {}
 
-    KernelLaunchConfig(kernel_t kernel, const char* title, dim3 block_dim, dim3 grid_dim, size_t shared_mem_size)
-        : kernel(kernel)
-        , title(title)
-        , warmup(10)
-        , repeat(100)
-        , block_dim(block_dim)
-        , grid_dim(grid_dim)
-        , shared_mem_size(shared_mem_size) {}
+    KernelLaunchConfig(kernel_t kernel, const char* title, dim3 block_dim, dim3 grid_dim,
+                       size_t shared_mem_size)
+        : kernel(kernel), title(title), warmup(10), repeat(100), block_dim(block_dim),
+          grid_dim(grid_dim), shared_mem_size(shared_mem_size) {}
 
     BenchmarkResult run(const xt::xarray<float>& inp) {
         const size_t nrow = inp.shape(0);
         const size_t ncol = inp.shape(1);
         const size_t size = nrow * ncol;
         const size_t mem_size = size * sizeof(float);
-        
+
         xt::xarray<float> out_ref = xt::zeros<float>({nrow, ncol});
         xt::xarray<float> out_cpu = xt::zeros<float>({nrow, ncol});
         xt::xarray<float> out_gpu = xt::zeros<float>({nrow, ncol});
@@ -99,18 +85,11 @@ class KernelLaunchConfig {
 
         // lambda to launch the kernel
         auto launch = [&](float* y, const float* x) {
-            void* args[] = {
-                (void*) &y, (void*) &x,
-                (void*) &nrow,
-                (void*) &ncol
-            };
+            void* args[] = {(void*)&y, (void*)&x, (void*)&nrow, (void*)&ncol};
 
-            cudaLaunchKernel(
-                (void*) this->kernel,
-                this->grid_dim,
-                this->block_dim,
-                args, this->shared_mem_size,
-                0  // stream
+            cudaLaunchKernel((void*)this->kernel, this->grid_dim, this->block_dim, args,
+                             this->shared_mem_size,
+                             0  // stream
             );
         };
 
@@ -147,7 +126,7 @@ class KernelLaunchConfig {
         cudaFree(inp_gpu_ptr);
         cudaFree(out_gpu_ptr);
 
-        // 
+        //
         auto result = BenchmarkResult();
         result.time_cpu_ms = time_cpu_ms;
         result.time_gpu_ms = time_gpu_ms;
