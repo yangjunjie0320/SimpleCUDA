@@ -17,7 +17,7 @@ git clone git@github.com:yangjunjie0320/SimpleCUDA.git
 cd SimpleCUDA
 ```
 
-2. Install dependencies (CUDA, Armadillo) with conda:
+2. Install dependencies (CUDA, xtensor) with conda:
 ```bash
 conda env create -f environment.yml -n simple-cuda
 conda activate simple-cuda
@@ -25,8 +25,8 @@ conda activate simple-cuda
 
 3. Build the project:
 ```bash
-rm -rf build
-cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+git clean -fdx
+cmake -B build -DCMAKE_CUDA_ARCHITECTURES=89
 cmake --build build
 ```
 

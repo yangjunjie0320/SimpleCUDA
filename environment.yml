@@ -8,4 +8,4 @@ dependencies:
   - cmake
   - cuda-toolkit
   - clang-format
-  - armadillo
+  - xtensor

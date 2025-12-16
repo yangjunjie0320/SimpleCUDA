@@ -1,41 +1,30 @@
-#include <armadillo>
-#include <string>
-#include <chrono>
-
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <vector>
-#include <cmath>
+using hrc = std::chrono::high_resolution_clock;
+using dt = std::chrono::duration<float, std::milli>;
 
 class BenchmarkResult {
   public:
     float time_cpu_ms;
     float time_gpu_ms;
-    float max_error;
-    std::size_t nrow;
-    std::string kernel_name;
+    xt::xarray<float> error_cpu;
+    xt::xarray<float> error_gpu;
+    const char* title;
 
     void print(bool cpu = true, bool gpu = true) const {
-        auto name = this->kernel_name.c_str();
         auto time_cpu_ms = this->time_cpu_ms;
         auto time_gpu_ms = this->time_gpu_ms;
-        auto nrow = this->nrow;
+        auto error_cpu = xt::amax(this->error_cpu)();
+        auto error_gpu = xt::amax(this->error_gpu)();
+        auto nrow = this->error_cpu.shape(0);
 
         if (cpu) {
+            auto error = xt::amax(this->error_cpu)();
             printf("\n%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n",
-                   "softmax_f32_cpu",
-                   nrow,
-                   time_cpu_ms,
-                   0.0);
+                   "softmax_f32_cpu", nrow, time_cpu_ms, error);
         }
         if (gpu) {
+            auto error = xt::amax(this->error_gpu)();
             printf("%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n",
-                   name,
-                   nrow,
-                   time_gpu_ms,
-                   max_error);
+                   this->title, nrow, time_gpu_ms, error);
         }
     }
 };
@@ -44,89 +33,90 @@ template <typename kernel_t>
 class KernelLaunchConfig {
   public:
     kernel_t   kernel;
-    const char* kernel_name;
-    std::size_t warmup;
-    std::size_t repeat;
-    dim3       block_dim;
-    dim3       grid_dim;
-    std::size_t shared_mem_size;
+    const char* title;
+    size_t warmup;
+    size_t repeat;
+    dim3 block_dim;
+    dim3 grid_dim;
+    size_t shared_mem_size;
 
     KernelLaunchConfig(kernel_t kernel,
-                       const char* kernel_name,
-                       std::size_t warmup,
-                       std::size_t repeat,
+                       const char* title,
+                       size_t warmup,
+                       size_t repeat,
                        dim3 block_dim,
                        dim3 grid_dim,
-                       std::size_t shared_mem_size)
+                       size_t shared_mem_size)
         : kernel(kernel)
-        , kernel_name(kernel_name)
+        , title(title)
         , warmup(warmup)
         , repeat(repeat)
         , block_dim(block_dim)
         , grid_dim(grid_dim)
         , shared_mem_size(shared_mem_size) {}
 
-    KernelLaunchConfig(kernel_t kernel, const char* kernel_name, dim3 block_dim, dim3 grid_dim, std::size_t shared_mem_size)
+    KernelLaunchConfig(kernel_t kernel, const char* title, dim3 block_dim, dim3 grid_dim, size_t shared_mem_size)
         : kernel(kernel)
-        , kernel_name(kernel_name)
+        , title(title)
         , warmup(10)
         , repeat(100)
         , block_dim(block_dim)
         , grid_dim(grid_dim)
         , shared_mem_size(shared_mem_size) {}
 
-    BenchmarkResult run(const arma::fmat& inp_mat) {
-        auto kernel_name = this->kernel_name;
-        auto warmup = this->warmup;
-        auto repeat = this->repeat;
+    BenchmarkResult run(const xt::xarray<float>& inp) {
+        const size_t nrow = inp.shape(0);
+        const size_t ncol = inp.shape(1);
+        const size_t size = nrow * ncol;
+        const size_t mem_size = size * sizeof(float);
+        
+        xt::xarray<float> out_ref = xt::zeros<float>({nrow, ncol});
+        xt::xarray<float> out_cpu = xt::zeros<float>({nrow, ncol});
+        xt::xarray<float> out_gpu = xt::zeros<float>({nrow, ncol});
+        softmax::kernel_ref(out_ref, inp);
 
-        const std::size_t nrow = inp_mat.n_rows;
-        const std::size_t ncol = inp_mat.n_cols;
-        const std::size_t size = nrow * ncol;
-        const std::size_t mem_size = size * sizeof(float);
-
-        auto out_cpu = arma::fmat(nrow, ncol);
-        auto out_gpu = arma::fmat(nrow, ncol);
-
-        float* inp_cpu_ptr = inp_mat.memptr();
-        float* out_cpu_ptr = malloc(mem_size);
+        // float *inp_cpu, *out_cpu;
+        // inp_cpu = (float*) malloc(mem_size);
+        // out_cpu = (float*) malloc(mem_size);
+        // memcpy(inp_cpu, inp.data(), mem_size);
+        const float* inp_cpu_ptr = inp.data();
+        float* out_cpu_ptr = out_cpu.data();
 
         // CPU softmax
-        auto t0_cpu = std::chrono::high_resolution_clock::now();
-        for (std::size_t x = 0; x < repeat; x++) {
+        auto t0_cpu = hrc::now();
+        for (size_t count = 0; count < repeat; count++) {
             softmax::kernel_cpu(out_cpu_ptr, inp_cpu_ptr, nrow, ncol);
         }
-        auto t1_cpu = std::chrono::high_resolution_clock::now();
-        float time_cpu_ms = std::chrono::duration<float, std::milli>(t1_cpu - t0_cpu).count();
-        time_cpu_ms /= static_cast<float>(repeat);
+        auto t1_cpu = hrc::now();
+        float time_cpu_ms = dt(t1_cpu - t0_cpu).count();
+        time_cpu_ms /= this->repeat;
 
         // GPU buffers
-        float *inp_gpu = nullptr, *out_gpu = nullptr;
-        cudaMalloc(&inp_gpu, mem_size);
-        cudaMalloc(&out_gpu, mem_size);
-        cudaMemcpy(inp_gpu, inp_cpu_ptr, mem_size, cudaMemcpyHostToDevice);
+        float *inp_gpu_ptr, *out_gpu_ptr;
+        cudaMalloc(&inp_gpu_ptr, mem_size);
+        cudaMalloc(&out_gpu_ptr, mem_size);
+        cudaMemcpy(inp_gpu_ptr, inp_cpu_ptr, mem_size, cudaMemcpyHostToDevice);
 
         // lambda to launch the kernel
-        auto launch = [&](float* out_gpu_local, const float* inp_gpu_local) {
+        auto launch = [&](float* y, const float* x) {
             void* args[] = {
-                (void*)&out_gpu_local,
-                (void*)&inp_gpu_local,
-                (void*)&nrow,
-                (void*)&ncol
+                (void*) &y, (void*) &x,
+                (void*) &nrow,
+                (void*) &ncol
             };
+
             cudaLaunchKernel(
-                (void*)this->kernel,
+                (void*) this->kernel,
                 this->grid_dim,
                 this->block_dim,
-                args,
-                this->shared_mem_size,
+                args, this->shared_mem_size,
                 0  // stream
             );
         };
 
         // Warmup
-        for (std::size_t x = 0; x < warmup; x++) {
-            launch(out_gpu, inp_gpu);
+        for (size_t x = 0; x < this->warmup; x++) {
+            launch(out_gpu_ptr, inp_gpu_ptr);
         }
         cudaDeviceSynchronize();
 
@@ -136,27 +126,34 @@ class KernelLaunchConfig {
         cudaEventCreate(&t1);
 
         cudaEventRecord(t0);
-        for (std::size_t x = 0; x < repeat; x++) {
-            launch(out_gpu, inp_gpu);
+        for (size_t count = 0; count < this->repeat; count++) {
+            launch(out_gpu_ptr, inp_gpu_ptr);
         }
         cudaEventRecord(t1);
         cudaEventSynchronize(t1);
 
-        float time_gpu_ms = 0.0f;
+        float time_gpu_ms = 0.0;
         cudaEventElapsedTime(&time_gpu_ms, t0, t1);
-        time_gpu_ms /= static_cast<float>(repeat);
+        time_gpu_ms /= this->repeat;
 
-        // copy GPU result back
-        cudaMemcpy(out_gpu_host.data(), out_gpu, mem_size, cudaMemcpyDeviceToHost);
-
-        // compute max absolute error between CPU and GPU outputs
-        auto err = arma::abs(out_cpu - out_gpu).max();
+        // copy GPU result to CPU (out_gpu to sol.data())
+        cudaMemcpy(out_gpu.data(), out_gpu_ptr, mem_size, cudaMemcpyDeviceToHost);
+        // copy CPU result to CPU (ref.data() to out_cpu)
+        // memcpy(out_cpu.data(), out_cpu, mem_size);
 
         // Cleanup
-        cudaFree(inp_gpu);
-        cudaFree(out_gpu);
+        cudaEventDestroy(t0);
+        cudaEventDestroy(t1);
+        cudaFree(inp_gpu_ptr);
+        cudaFree(out_gpu_ptr);
 
-        BenchmarkResult result{time_cpu_ms, time_gpu_ms, max_err, nrow, kernel_name};
+        // 
+        auto result = BenchmarkResult();
+        result.time_cpu_ms = time_cpu_ms;
+        result.time_gpu_ms = time_gpu_ms;
+        result.error_cpu = xt::abs(out_ref - out_cpu);
+        result.error_gpu = xt::abs(out_ref - out_gpu);
+        result.title = this->title;
         return result;
     }
 };
