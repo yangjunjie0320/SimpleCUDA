@@ -57,14 +57,10 @@ class KernelLaunchConfig {
         const size_t mem_size = size * sizeof(float);
 
         xt::xarray<float> out_ref = xt::zeros<float>({nrow, ncol});
-        xt::xarray<float> out_cpu = xt::zeros<float>({nrow, ncol});
-        xt::xarray<float> out_gpu = xt::zeros<float>({nrow, ncol});
         softmax::kernel_ref(out_ref, inp);
 
-        // float *inp_cpu, *out_cpu;
-        // inp_cpu = (float*) malloc(mem_size);
-        // out_cpu = (float*) malloc(mem_size);
-        // memcpy(inp_cpu, inp.data(), mem_size);
+        xt::xarray<float> out_cpu = xt::zeros<float>({nrow, ncol});
+        xt::xarray<float> out_gpu = xt::zeros<float>({nrow, ncol});
         const float* inp_cpu_ptr = inp.data();
         float* out_cpu_ptr = out_cpu.data();
 

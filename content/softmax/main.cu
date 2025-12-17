@@ -72,7 +72,7 @@ int main() {
 
         block_dim = dim3(1);
         config = KernelLaunchConfig(softmax::kernel_v2, "softmax_f32_v2", block_dim, grid_dim,
-                                    ncol * nrow * sizeof(float));
+                                    NUM_THREAD_IN_WARP * sizeof(float));
         result = config.run(inp);
         result.print(false, true);
 
