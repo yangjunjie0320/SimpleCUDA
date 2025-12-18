@@ -1,7 +1,10 @@
-#define FULL 0xffffffff
+#include <cuda_runtime.h>
+#include <cmath>
+
+#include "utils.cu"
 
 template <int num_rows_per_access, int num_cols_per_thread>
-__global__ void kernel_v5(float* out, const float* inp, size_t nrow, size_t ncol) {
+__global__ void kernel_v5(float* out, const float* inp, int nrow, int ncol) {
     float buff[num_rows_per_access][num_cols_per_thread];
 
     // const auto lane_idx = threadIdx.x;

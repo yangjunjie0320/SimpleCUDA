@@ -1,6 +1,9 @@
-#define FULL 0xffffffff
+#include <cuda_runtime.h>
+#include <cmath>
 
-__global__ void kernel_v3(float* out, const float* inp, size_t nrow, size_t ncol) {
+#include "utils.cu"
+
+__global__ void kernel_v3(float* out, const float* inp, int nrow, int ncol) {
     auto i = blockIdx.x;
     if (i >= nrow)
         return;

@@ -5,7 +5,8 @@ channels:
 dependencies:
   - python=3.10
   - compilers
+  - clang
+  - clang-tools
   - cmake
   - cuda-toolkit
-  - clang-format
   - xtensor

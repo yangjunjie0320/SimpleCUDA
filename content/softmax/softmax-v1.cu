@@ -1,0 +1,44 @@
+#include <cuda_runtime.h>
+#include <cmath>
+
+__global__ void kernel_v1(float* out, const float* inp, int nrow, int ncol) {
+    // const auto idx_thread_in_block = threadIdx.x;
+    // const auto idx_block_in_grid = blockIdx.x;
+    // const auto num_thread_in_block = blockDim.x;
+    // const auto num_block_in_grid = gridDim.x;
+    // const auto num_thread_in_grid = num_block_in_grid * num_thread_in_block;
+    // const auto idx_thread_in_grid = idx_block_in_grid * num_thread_in_block + idx_thread_in_block;
+
+    // const auto i = idx_thread_in_grid;
+    const auto idx_thread_in_block = threadIdx.x;
+    const auto num_thread_in_block = blockDim.x;
+    const auto idx_block_in_grid = blockIdx.x;
+    const auto num_block_in_grid = gridDim.x;
+    const auto idx_thread_in_grid = idx_block_in_grid * num_thread_in_block + idx_thread_in_block;
+
+    const auto i = idx_thread_in_grid;
+    if (i >= nrow) {return;}
+
+    const auto ai_ptr = inp + i * ncol;
+    const auto ci_ptr = out + i * ncol;
+
+    float ai_max = -INFINITY;
+    float ai_sum = 0.0;
+
+    for (auto j = 0; j < ncol; j++) {
+        float aij = ai_ptr[j];
+        ai_max = fmaxf(ai_max, aij);
+    }
+
+    for (auto j = 0; j < ncol; j++) {
+        float aij = ai_ptr[j];
+        float exp_aij = expf(aij - ai_max);
+        ai_sum += exp_aij;
+        ci_ptr[j] = exp_aij;
+    }
+
+    for (auto j = 0; j < ncol; j++) {
+        float ai_sum_inv = 1.0 / ai_sum;
+        ci_ptr[j] *= ai_sum_inv;
+    }
+}

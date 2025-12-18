@@ -1,6 +1,9 @@
-#define FULL 0xffffffff
+#include <cuda_runtime.h>
+#include <cmath>
 
-__global__ void kernel_v4(float* out, const float* inp, size_t nrow, size_t ncol) {
+#include "utils.cu"
+
+__global__ void kernel_v4(float* out, const float* inp, int nrow, int ncol) {
     // 每个 block 处理 blockDim.y 行
     // threadIdx.y 表示 block 内的行索引
     auto i = blockIdx.x * blockDim.y + threadIdx.y;

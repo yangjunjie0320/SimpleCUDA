@@ -1,5 +1,51 @@
+#pragma once
+#include <cstdio>
+#include <cuda_runtime.h>
+
+#define FULL 0xffffffff
+#define NUM_THREAD_IN_WARP 32
+#define NUM_WARP_IN_BLOCK 4
+
+#include <xtensor/containers/xarray.hpp>
+#include <xtensor/generators/xrandom.hpp>
+
+#include <chrono>
 using hrc = std::chrono::high_resolution_clock;
 using dt = std::chrono::duration<float, std::milli>;
+
+namespace softmax {
+    void kernel_cpu(float* out, const float* inp, const int nrow, const int ncol) {
+        for (int i = 0; i < nrow; i++) {
+            const float* ai_ptr = inp + i * ncol;
+            float* ci_ptr = out + i * ncol;
+    
+            float ai_max = -INFINITY;
+            for (int j = 0; j < ncol; j++) {
+                float aij = *(ai_ptr + j);
+                ai_max = fmaxf(ai_max, aij);
+            }
+    
+            float ai_sum = 0.0;
+            for (int j = 0; j < ncol; j++) {
+                float aij = *(ai_ptr + j);
+                float exp_aij = expf(aij - ai_max);
+                ai_sum += exp_aij;
+                *(ci_ptr + j) = exp_aij;
+            }
+    
+            for (int j = 0; j < ncol; j++) {
+                *(ci_ptr + j) /= ai_sum;
+            }
+        }
+    }
+    
+    void kernel_ref(xt::xarray<float>& out, const xt::xarray<float>& inp) {
+        xt::xarray<float> a_max = xt::amax(inp, {1}, xt::keep_dims);
+        xt::xarray<float> a_exp = xt::exp(inp - a_max);
+        xt::xarray<float> a_sum = xt::sum(a_exp, {1}, xt::keep_dims);
+        out = a_exp / a_sum;
+    }
+}  // namespace softmax
 
 class BenchmarkResult {
   public:
@@ -12,8 +58,8 @@ class BenchmarkResult {
     void print(bool cpu = true, bool gpu = true) const {
         auto time_cpu_ms = this->time_cpu_ms;
         auto time_gpu_ms = this->time_gpu_ms;
-        auto error_cpu = xt::amax(this->error_cpu)();
-        auto error_gpu = xt::amax(this->error_gpu)();
+        auto error_cpu = xt::amax(this->error_cpu);
+        auto error_gpu = xt::amax(this->error_gpu);
         auto nrow = this->error_cpu.shape(0);
 
         if (cpu) {
@@ -34,27 +80,27 @@ class KernelLaunchConfig {
   public:
     kernel_t kernel;
     const char* title;
-    size_t warmup;
-    size_t repeat;
+    int warmup;
+    int repeat;
     dim3 block_dim;
     dim3 grid_dim;
-    size_t shared_mem_size;
+    int shared_mem_size;
 
-    KernelLaunchConfig(kernel_t kernel, const char* title, size_t warmup, size_t repeat,
-                       dim3 block_dim, dim3 grid_dim, size_t shared_mem_size)
+    KernelLaunchConfig(kernel_t kernel, const char* title, int warmup, int repeat,
+                       dim3 block_dim, dim3 grid_dim, int shared_mem_size)
         : kernel(kernel), title(title), warmup(warmup), repeat(repeat), block_dim(block_dim),
           grid_dim(grid_dim), shared_mem_size(shared_mem_size) {}
 
     KernelLaunchConfig(kernel_t kernel, const char* title, dim3 block_dim, dim3 grid_dim,
-                       size_t shared_mem_size)
+                       int shared_mem_size)
         : kernel(kernel), title(title), warmup(10), repeat(100), block_dim(block_dim),
           grid_dim(grid_dim), shared_mem_size(shared_mem_size) {}
 
     BenchmarkResult run(const xt::xarray<float>& inp) {
-        const size_t nrow = inp.shape(0);
-        const size_t ncol = inp.shape(1);
-        const size_t size = nrow * ncol;
-        const size_t mem_size = size * sizeof(float);
+        const int nrow = inp.shape(0);
+        const int ncol = inp.shape(1);
+        const int size = nrow * ncol;
+        const int mem_size = size * sizeof(float);
 
         xt::xarray<float> out_ref = xt::zeros<float>({nrow, ncol});
         softmax::kernel_ref(out_ref, inp);
@@ -66,7 +112,7 @@ class KernelLaunchConfig {
 
         // CPU softmax
         auto t0_cpu = hrc::now();
-        for (size_t count = 0; count < repeat; count++) {
+        for (int count = 0; count < repeat; count++) {
             softmax::kernel_cpu(out_cpu_ptr, inp_cpu_ptr, nrow, ncol);
         }
         auto t1_cpu = hrc::now();
@@ -90,7 +136,7 @@ class KernelLaunchConfig {
         };
 
         // Warmup
-        for (size_t x = 0; x < this->warmup; x++) {
+        for (int x = 0; x < this->warmup; x++) {
             launch(out_gpu_ptr, inp_gpu_ptr);
         }
         cudaDeviceSynchronize();
@@ -101,7 +147,7 @@ class KernelLaunchConfig {
         cudaEventCreate(&t1);
 
         cudaEventRecord(t0);
-        for (size_t count = 0; count < this->repeat; count++) {
+        for (int count = 0; count < this->repeat; count++) {
             launch(out_gpu_ptr, inp_gpu_ptr);
         }
         cudaEventRecord(t1);

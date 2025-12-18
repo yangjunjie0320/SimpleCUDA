@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
-
+cmake_minimum_required(VERSION 3.20)
 project(simple_cuda LANGUAGES CXX CUDA)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -19,20 +18,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 foreach(MAIN_CXX_FILE ${MAIN_CXX_FILES})
     get_filename_component(MAIN_DIR ${MAIN_CXX_FILE} DIRECTORY)
     get_filename_component(MODULE_NAME ${MAIN_DIR} NAME)
-    
+
     set(EXEC_NAME "${MODULE_NAME}.x")
     add_executable(${EXEC_NAME} ${MAIN_CXX_FILE})
-    
+
     target_link_libraries(
         ${EXEC_NAME}
         PRIVATE CUDA::cudart
     )
+
     target_include_directories(
         ${EXEC_NAME}
-        PUBLIC ${CUDAToolkit_INCLUDE_DIRS}
-    )
-    target_include_directories(
-        ${EXEC_NAME}
-        PUBLIC ${xtensor_INCLUDE_DIRS}
+        PRIVATE ${xtensor_INCLUDE_DIRS}
     )
 endforeach()

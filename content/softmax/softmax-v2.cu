@@ -1,10 +1,17 @@
-__global__ void kernel_v2(float* out, const float* inp, size_t nrow, size_t ncol) {
-    auto i = blockIdx.x;
-    if (i >= nrow)
-        return;
+#include <cuda_runtime.h>
+#include <cmath>
 
-    auto t = threadIdx.x;
-    auto stride = blockDim.x;
+// each block handles one row, use ncol threads
+__global__ void kernel_v2(float* out, const float* inp, int nrow, int ncol) {
+    const auto num_thread_in_block = blockDim.x;
+    const auto num_block_in_grid = gridDim.x;
+
+    const auto idx_thread_in_block = threadIdx.x;
+    const auto idx_block_in_grid = blockIdx.x;
+    const auto idx_thread_in_grid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    const auto i = idx_thread_in_grid;
+    if (i >= nrow) {return;}
 
     const float* ai_ptr = inp + i * ncol;
     float* ci_ptr = out + i * ncol;

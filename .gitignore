@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 compile_commands.json
 .clangd
+.clang-tidy
 
 # CUDA profiling
 *.ncu-rep
