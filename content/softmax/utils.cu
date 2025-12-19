@@ -1,17 +1,26 @@
 #pragma once
+// basic utilities
 #include <cstdio>
+#include <cmath>
 #include <cuda_runtime.h>
+#include <cub/cub.cuh>
 
-#define FULL 0xffffffff
-#define NUM_THREAD_IN_WARP 32
-#define NUM_WARP_IN_BLOCK 4
-
+// xtensor related
 #include <xtensor/containers/xarray.hpp>
 #include <xtensor/generators/xrandom.hpp>
 
+// timing utilities
 #include <chrono>
 using hrc = std::chrono::high_resolution_clock;
 using dt = std::chrono::duration<float, std::milli>;
+
+// assertion utilities, only used in debug mode
+#include <cassert>
+
+// constants
+#define FULL 0xffffffff
+#define NUM_THREAD_IN_WARP 32
+#define NUM_WARP_IN_BLOCK 4
 
 namespace softmax {
     void kernel_cpu(float* out, const float* inp, const int nrow, const int ncol) {

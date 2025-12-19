@@ -1,6 +1,3 @@
-#include <cuda_runtime.h>
-#include <cmath>
-
 #include "utils.cu"
 
 __global__ void kernel_v4(float* out, const float* inp, int nrow, int ncol) {

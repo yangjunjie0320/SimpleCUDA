@@ -9,8 +9,9 @@ namespace softmax {
 #include "softmax-v1.cu"
 #include "softmax-v2.cu"
 #include "softmax-v3.cu"
-#include "softmax-v4.cu"
-#include "softmax-v5.cu"
+// #include "softmax-v4.cu"
+// #include "softmax-v5.cu"
+// #include "softmax-v6.cu"
 }  // namespace softmax
 
 int main() {
@@ -26,21 +27,25 @@ int main() {
         auto result = config.run(inp);
         result.print(true, true);
 
-        block_dim = dim3(1);
-        config = KernelLaunchConfig(softmax::kernel_v2, "softmax_f32_v2", block_dim, grid_dim,
-                                    NUM_THREAD_IN_WARP * sizeof(float));
-        result = config.run(inp);
-        result.print(false, true);
-
-        block_dim = dim3(NUM_THREAD_IN_WARP);
-        config = KernelLaunchConfig(softmax::kernel_v3, "softmax_f32_v3", block_dim, grid_dim, 0);
+        block_dim = dim3(NUM_THREAD_IN_WARP, NUM_WARP_IN_BLOCK);
+        config = KernelLaunchConfig(softmax::kernel_v2, "softmax_f32_v2", block_dim, grid_dim, 0);
         result = config.run(inp);
         result.print(false, true);
 
         block_dim = dim3(NUM_THREAD_IN_WARP, NUM_WARP_IN_BLOCK);
-        config = KernelLaunchConfig(softmax::kernel_v4, "softmax_f32_v4", block_dim, grid_dim, 0);
+        config = KernelLaunchConfig(softmax::kernel_v3, "softmax_f32_v3", block_dim, grid_dim, 0);
         result = config.run(inp);
         result.print(false, true);
+
+        // block_dim = dim3(NUM_THREAD_IN_WARP);
+        // config = KernelLaunchConfig(softmax::kernel_v3, "softmax_f32_v3", block_dim, grid_dim, 0);
+        // result = config.run(inp);
+        // result.print(false, true);
+
+        // block_dim = dim3(NUM_THREAD_IN_WARP, NUM_WARP_IN_BLOCK);
+        // config = KernelLaunchConfig(softmax::kernel_v4, "softmax_f32_v4", block_dim, grid_dim, 0);
+        // result = config.run(inp);
+        // result.print(false, true);
 
         // constexpr int num_rows_per_access = 4;
         // constexpr int num_cols_per_thread = NUM_WARP_IN_BLOCK;

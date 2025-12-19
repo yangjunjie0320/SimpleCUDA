@@ -2,13 +2,19 @@ cmake_minimum_required(VERSION 3.20)
 project(simple_cuda LANGUAGES CXX CUDA)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+add_compile_options(-w)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w")
+
+option(ENABLE_DEBUG "Enable debug mode with assertions" OFF)
+if(NOT ENABLE_DEBUG)
+    message(STATUS "Building in release mode (assertions disabled)")
+    add_compile_definitions(NDEBUG)
+endif()
 
 find_package(CUDAToolkit REQUIRED)
 find_package(xtensor REQUIRED)
