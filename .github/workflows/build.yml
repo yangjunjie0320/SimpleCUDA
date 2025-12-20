@@ -31,8 +31,7 @@ jobs:
         shell: bash -l {0}
         run: |
           micromamba run -n simple-cuda cmake \
-            -S . \
-            -B build \
+            -S . -B build \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DCMAKE_CUDA_ARCHITECTURES=89
 

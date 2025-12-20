@@ -8,5 +8,5 @@ dependencies:
   - clang
   - clang-tools
   - cmake
-  - cuda-toolkit
+  - cuda-toolkit=12.8.0
   - xtensor
