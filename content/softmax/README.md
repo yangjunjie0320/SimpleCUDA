@@ -2,9 +2,14 @@ use the following command to summarize kernels:
 ```bash
 sed -i '/^## Kernels/,$d' README.md
 echo -e "## Kernels\n" >> README.md
+
 for f in softmax-v*.cu; do
   v=$(echo $f | grep -oP 'v\d+')
-  comment=$(grep -m1 '^// ' $f | sed 's/^\/\/ *//') 
+  comment=$(awk '
+    /^\/\// { lines = lines (lines ? " " : "") substr($0, 4); next }
+    /^__global__|^template/ { print lines; exit }
+    { lines = "" }
+  ' "$f")
   [ -z "$comment" ] && comment="(no description)"
   echo "- \`kernel_$v\`: $comment" >> README.md
 done
@@ -24,6 +29,12 @@ In which `NUM_WARP_IN_BLOCK` is 4 and `NUM_THREAD_IN_WARP` is 32.
 - 高占用率有助于隐藏延迟，但真正性能还依赖于内存访问效率、分支发散等因素。
 - 每个线程的 workload 应均匀且适中：太小浪费调度资源，太大则可能占用过多资源降低并发。
 
+### Further Optimization Directions
+- Online Softmax: 一次遍历同时算 max 和 sum，减少 memory pass
+- Persistent Kernel: Block 常驻动态领任务，减少 launch 开销和负载不均
+- 混合精度 (FP16/BF16): 半精度读写、单精度计算，带宽减半
+- Warp Specialization: 不同 warp 分工（load/compute/store），流水线并行
+
 ## Kernels
 
 - `kernel_v1`: each block handles one row, 1 thread, naive serial implementation
@@ -31,3 +42,4 @@ In which `NUM_WARP_IN_BLOCK` is 4 and `NUM_THREAD_IN_WARP` is 32.
 - `kernel_v3`: each block handles one row with ncol threads, CUB BlockReduce
 - `kernel_v4`: each block handles one row, use NUM_THREAD_IN_WARP threads
 - `kernel_v5`: each warp handles one row NUM_THREAD_IN_WARP threads; each block contains NUM_WARP_IN_BLOCK warps
+- `kernel_v6`: Each warp processes num_rows_per_access contiguous rows per iteration, striding by row_step across multiple iterations. Each thread handles num_cols_per_thread non-contiguous columns (stride = NUM_THREAD_IN_WARP). Each block contains NUM_WARP_IN_BLOCK warps.

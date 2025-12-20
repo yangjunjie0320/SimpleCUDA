@@ -50,7 +50,7 @@ __global__ void kernel_v4(float* out, const float* inp, int nrow, int ncol) {
     for (int offset = offset0; offset > 0; offset >>= 1) {
         const auto ai_sum_curr_lane = ai_sum_in_warp;
         auto ai_sum_next_lane = __shfl_down_sync(FULL, ai_sum_in_warp, offset);
-        ai_sum_in_warp += ai_sum_next_lane;
+        ai_sum_in_warp = ai_sum_curr_lane + ai_sum_next_lane;
     }
     const float ai_sum = __shfl_sync(FULL, ai_sum_in_warp, 0);
     const float ai_sum_inv = 1.0 / ai_sum;

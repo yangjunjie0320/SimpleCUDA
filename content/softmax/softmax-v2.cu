@@ -1,6 +1,6 @@
 #include "utils.cu"
 
-// each block handles one row with ncol threads, smem tree reduction, ncol must equal block size
+// each block handles one row with ncol threads, buff tree reduction, ncol must equal block size
 __global__ void kernel_v2(float* out, const float* inp, int nrow, int ncol) {
     const auto num_thread_in_warp = blockDim.x;
     const auto num_warp_in_block = blockDim.y;
@@ -22,40 +22,40 @@ __global__ void kernel_v2(float* out, const float* inp, int nrow, int ncol) {
     const float* ai_ptr = inp + i * ncol;
     const float aij = ai_ptr[j];
 
-    __shared__ float smem[NUM_THREAD_IN_WARP * NUM_WARP_IN_BLOCK];
+    __shared__ float buff[NUM_THREAD_IN_WARP * NUM_WARP_IN_BLOCK];
 
-    smem[idx_thread_in_block] = aij;
+    buff[idx_thread_in_block] = aij;
     __syncthreads();
 
 #pragma unroll
     for (auto offset = offset0; offset > 0; offset >>= 1) {
         if (idx_thread_in_block < offset) {
-            auto ai_max_curr_thread = smem[idx_thread_in_block];
-            auto ai_max_next_thread = smem[idx_thread_in_block + offset];
-            smem[idx_thread_in_block] = fmaxf(ai_max_curr_thread, ai_max_next_thread);
+            auto ai_max_curr_thread = buff[idx_thread_in_block];
+            auto ai_max_next_thread = buff[idx_thread_in_block + offset];
+            buff[idx_thread_in_block] = fmaxf(ai_max_curr_thread, ai_max_next_thread);
         }
         __syncthreads();
     }
 
-    const float ai_max_in_block = smem[0];
+    const float ai_max_in_block = buff[0];
     const float ai_max = ai_max_in_block;
     __syncthreads();
 
     const float exp_aij = expf(aij - ai_max);
-    smem[idx_thread_in_block] = exp_aij;
+    buff[idx_thread_in_block] = exp_aij;
     __syncthreads();
 
 #pragma unroll
     for (auto offset = offset0; offset > 0; offset >>= 1) {
         if (idx_thread_in_block < offset) {
-            auto ai_sum_curr_thread = smem[idx_thread_in_block];
-            auto ai_sum_next_thread = smem[idx_thread_in_block + offset];
-            smem[idx_thread_in_block] += ai_sum_next_thread;
+            auto ai_sum_curr_thread = buff[idx_thread_in_block];
+            auto ai_sum_next_thread = buff[idx_thread_in_block + offset];
+            buff[idx_thread_in_block] += ai_sum_next_thread;
         }
         __syncthreads();
     }
 
-    const float ai_sum_in_block = smem[0];
+    const float ai_sum_in_block = buff[0];
     const float ai_sum = ai_sum_in_block;
     __syncthreads();
 
