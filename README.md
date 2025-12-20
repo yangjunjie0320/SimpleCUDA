@@ -26,8 +26,8 @@ conda activate simple-cuda
 
 3. Build the project:
 ```bash
-rm -rf build
-cmake -B build -DCMAKE_CUDA_ARCHITECTURES=89 -DNDEBUG=ON
+conda activate simple-cuda; rm -rf build
+cmake -B build -DCMAKE_CUDA_ARCHITECTURES=89 -DENABLE_DEBUG=ON
 cmake --build build
 ```
 

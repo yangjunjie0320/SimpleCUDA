@@ -9,7 +9,7 @@ namespace softmax {
 #include "softmax-v1.cu"
 #include "softmax-v2.cu"
 #include "softmax-v3.cu"
-// #include "softmax-v4.cu"
+#include "softmax-v4.cu"
 // #include "softmax-v5.cu"
 // #include "softmax-v6.cu"
 }  // namespace softmax
@@ -37,10 +37,10 @@ int main() {
         result = config.run(inp);
         result.print(false, true);
 
-        // block_dim = dim3(NUM_THREAD_IN_WARP);
-        // config = KernelLaunchConfig(softmax::kernel_v3, "softmax_f32_v3", block_dim, grid_dim, 0);
-        // result = config.run(inp);
-        // result.print(false, true);
+        block_dim = dim3(NUM_THREAD_IN_WARP);
+        config = KernelLaunchConfig(softmax::kernel_v4, "softmax_f32_v4", block_dim, grid_dim, 0);
+        result = config.run(inp);
+        result.print(false, true);
 
         // block_dim = dim3(NUM_THREAD_IN_WARP, NUM_WARP_IN_BLOCK);
         // config = KernelLaunchConfig(softmax::kernel_v4, "softmax_f32_v4", block_dim, grid_dim, 0);
