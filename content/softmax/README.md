@@ -18,7 +18,7 @@ done
 ### Note
 
 The kernels are running with random generated input data of (nrow, NUM_WARP_IN_BLOCK * NUM_THREAD_IN_WARP).
-In which `NUM_WARP_IN_BLOCK` is 4 and `NUM_THREAD_IN_WARP` is 32.
+In which `NUM_WARP_IN_BLOCK` is 4 and `NUM_THREAD_IN_WARP` is 32. TODO: changing `NUM_WARP_IN_BLOCK` will make the result wrong in `kernel_v7`, fix it later.
 
 - SM是 GPU 的基本执行单元，有固定资源限制：最大一起活跃的 warp 数、block/thread 数、使用的寄存器与共享内存都有限制。
 - occupancy = 活跃 warp 数 / SM 支持的最大 warp 数，反映 SM 并行利用程度。
@@ -38,8 +38,9 @@ In which `NUM_WARP_IN_BLOCK` is 4 and `NUM_THREAD_IN_WARP` is 32.
 ## Kernels
 
 - `kernel_v1`: each block handles one row, 1 thread, naive serial implementation
-- `kernel_v2`: each block handles one row with ncol threads, smem tree reduction, ncol must equal block size
+- `kernel_v2`: each block handles one row with ncol threads, buff tree reduction, ncol must equal block size
 - `kernel_v3`: each block handles one row with ncol threads, CUB BlockReduce
 - `kernel_v4`: each block handles one row, use NUM_THREAD_IN_WARP threads
 - `kernel_v5`: each warp handles one row NUM_THREAD_IN_WARP threads; each block contains NUM_WARP_IN_BLOCK warps
-- `kernel_v6`: Each warp processes num_rows_per_access contiguous rows per iteration, striding by row_step across multiple iterations. Each thread handles num_cols_per_thread non-contiguous columns (stride = NUM_THREAD_IN_WARP). Each block contains NUM_WARP_IN_BLOCK warps.
+- `kernel_v6`: Each block handles one row with NUM_WARP_IN_BLOCK warps. Each thread handles one element (ncol must equal block size).
+- `kernel_v7`: Each warp processes num_rows_per_access contiguous rows per iteration, striding by row_step across multiple iterations. Each thread handles num_cols_per_thread non-contiguous columns (stride = NUM_THREAD_IN_WARP). Each block contains NUM_WARP_IN_BLOCK warps.

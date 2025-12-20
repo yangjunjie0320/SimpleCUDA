@@ -1,10 +1,11 @@
 #include "utils.cu"
 
-// each block handles one row, use NUM_WARP_IN_BLOCK warps, each warp handles NUM_THREAD_IN_WARP
-// threads
+// Each block handles one row with NUM_WARP_IN_BLOCK warps.
+// Each thread handles one element (ncol must equal block size).
 __global__ void kernel_v6(float* out, const float* inp, int nrow, int ncol) {
     const auto num_thread_in_warp = blockDim.x;
     const auto num_warp_in_block = blockDim.y;
+    const auto num_thread_in_block = num_thread_in_warp * num_warp_in_block;
     const auto num_block_in_grid = gridDim.x;
 
     const auto idx_lane = threadIdx.x;
