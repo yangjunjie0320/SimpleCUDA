@@ -10,7 +10,7 @@ for f in softmax-v*.cu; do
 done
 ```
 
-### Benchmark
+### Note
 
 The kernels are running with random generated input data of (nrow, NUM_WARP_IN_BLOCK * NUM_THREAD_IN_WARP).
 In which `NUM_WARP_IN_BLOCK` is 4 and `NUM_THREAD_IN_WARP` is 32.
@@ -21,5 +21,4 @@ In which `NUM_WARP_IN_BLOCK` is 4 and `NUM_THREAD_IN_WARP` is 32.
 - `kernel_v2`: each block handles one row with ncol threads, smem tree reduction, ncol must equal block size
 - `kernel_v3`: each block handles one row with ncol threads, CUB BlockReduce
 - `kernel_v4`: each block handles one row, use NUM_THREAD_IN_WARP threads
-- `kernel_v5`: (no description)
-- `kernel_v6`: (no description)
+- `kernel_v5`: each warp handles one row NUM_THREAD_IN_WARP threads; each block contains NUM_WARP_IN_BLOCK warps

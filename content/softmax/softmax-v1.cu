@@ -20,19 +20,19 @@ __global__ void kernel_v1(float* out, const float* inp, int nrow, int ncol) {
     float ai_sum = 0.0;
 
     for (auto j = 0; j < ncol; j++) {
-        float aij = ai_ptr[j];
+        const float aij = ai_ptr[j];
         ai_max = fmaxf(ai_max, aij);
     }
 
     for (auto j = 0; j < ncol; j++) {
-        float aij = ai_ptr[j];
-        float exp_aij = expf(aij - ai_max);
+        const float aij = ai_ptr[j];
+        const float exp_aij = expf(aij - ai_max);
         ai_sum += exp_aij;
         ci_ptr[j] = exp_aij;
     }
 
     for (auto j = 0; j < ncol; j++) {
-        float ai_sum_inv = 1.0 / ai_sum;
+        const float ai_sum_inv = 1.0 / ai_sum;
         ci_ptr[j] *= ai_sum_inv;
     }
 }

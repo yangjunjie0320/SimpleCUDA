@@ -10,14 +10,14 @@ namespace softmax {
 #include "softmax-v2.cu"
 #include "softmax-v3.cu"
 #include "softmax-v4.cu"
-// #include "softmax-v5.cu"
+#include "softmax-v5.cu"
 // #include "softmax-v6.cu"
 }  // namespace softmax
 
 int main() {
     for (int nrow = 256; nrow <= 8192; nrow *= 2) {
         const int ncol = NUM_THREAD_IN_WARP * NUM_WARP_IN_BLOCK;
-        xt::xarray<float> inp = xt::random::randn<float>({nrow, ncol});
+        const xt::xarray<float> inp = xt::random::randn<float>({nrow, ncol});
 
         int num_block_in_grid = nrow;
         auto block_dim = dim3(1);
@@ -42,9 +42,12 @@ int main() {
         result = config.run(inp);
         result.print(false, true);
 
-        // block_dim = dim3(NUM_THREAD_IN_WARP, NUM_WARP_IN_BLOCK);
-        // config = KernelLaunchConfig(softmax::kernel_v4, "softmax_f32_v4", block_dim, grid_dim,
-        // 0); result = config.run(inp); result.print(false, true);
+        block_dim = dim3(NUM_THREAD_IN_WARP, NUM_WARP_IN_BLOCK);
+        num_block_in_grid = (nrow + NUM_WARP_IN_BLOCK - 1) / NUM_WARP_IN_BLOCK;
+        grid_dim = dim3(num_block_in_grid);
+        config = KernelLaunchConfig(softmax::kernel_v5, "softmax_f32_v5", block_dim, grid_dim, 0);
+        result = config.run(inp);
+        result.print(false, true);
 
         // constexpr int num_rows_per_access = 4;
         // constexpr int num_cols_per_thread = NUM_WARP_IN_BLOCK;
