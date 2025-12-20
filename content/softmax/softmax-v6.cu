@@ -29,12 +29,13 @@ __global__ void kernel_v6(float* out, const float* inp, int nrow, int ncol) {
 
     for (auto i0 = row_base; i0 < nrow; i0 += row_step) {
         // Process rows [i0, i0 + num_rows_per_access)
-        // Each thread handles columns: idx_lane + jj * 32, for jj = 0, 1, ..., num_cols_per_thread - 1
-    
+        // Each thread handles columns: idx_lane + jj * 32, for jj = 0, 1, ..., num_cols_per_thread
+        // - 1
+
         // Thread-local max/sum across strided columns
         float ai_max_in_thread[num_rows_per_access];
         float ai_sum_in_thread[num_rows_per_access];
-    
+
         // Warp-wide max/sum after reduction (full row)
         float ai_max[num_rows_per_access];
         float ai_sum[num_rows_per_access];
@@ -77,8 +78,8 @@ __global__ void kernel_v6(float* out, const float* inp, int nrow, int ncol) {
             for (auto jj = 0; jj < num_cols_per_thread; jj++) {
                 float aij = buff[ii][jj];
                 float exp_aij = expf(aij - ai_max[ii]);
-                buff[ii][jj] = exp_aij;
 
+                buff[ii][jj] = exp_aij;
                 ai_sum_in_thread[ii] += exp_aij;
             }
         }
@@ -89,7 +90,7 @@ __global__ void kernel_v6(float* out, const float* inp, int nrow, int ncol) {
             for (auto offset = NUM_THREAD_IN_WARP / 2; offset > 0; offset >>= 1) {
                 float ai_sum_curr_lane = ai_sum_in_thread[ii];
                 float ai_sum_next_lane = __shfl_down_sync(FULL, ai_sum_in_thread[ii], offset);
-                ai_sum_in_thread[ii] += ai_sum_next_lane;
+                ai_sum_in_thread[ii] = ai_sum_curr_lane + ai_sum_next_lane;
             }
             ai_sum[ii] = __shfl_sync(FULL, ai_sum_in_thread[ii], 0);
         }
@@ -97,7 +98,8 @@ __global__ void kernel_v6(float* out, const float* inp, int nrow, int ncol) {
 #pragma unroll
         for (auto ii = 0; ii < num_rows_per_access; ii++) {
             auto i = i0 + ii;
-            if (i >= nrow) continue;
+            if (i >= nrow)
+                continue;
 
             auto ai_sum_inv = 1.0 / ai_sum[ii];
             float* ci_ptr = out + i * ncol;
