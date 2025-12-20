@@ -6,17 +6,17 @@ __global__ void kernel_v4(float* out, const float* inp, int nrow, int ncol) {
     const auto num_warp_in_block = blockDim.y;
     const auto num_thread_in_block = num_thread_in_warp * num_warp_in_block;
     const auto num_block_in_grid = gridDim.x;
-    
-    const auto idx_lane = threadIdx.x; // thread index within a warp
+
+    const auto idx_lane = threadIdx.x;  // thread index within a warp
     const auto idx_block_in_grid = blockIdx.x;
 
     constexpr auto offset0 = NUM_THREAD_IN_WARP / 2;
 
     // sanity check
-    assert (num_warp_in_block == 1 && num_thread_in_block == NUM_THREAD_IN_WARP);
-    assert (num_block_in_grid == nrow);
-    assert (offset0 * 2 == num_thread_in_warp);
-    
+    assert(num_warp_in_block == 1 && num_thread_in_block == NUM_THREAD_IN_WARP);
+    assert(num_block_in_grid == nrow);
+    assert(offset0 * 2 == num_thread_in_warp);
+
     const auto i = idx_block_in_grid;
     const float* ai_ptr = inp + i * ncol;
 
@@ -28,17 +28,17 @@ __global__ void kernel_v4(float* out, const float* inp, int nrow, int ncol) {
         float aij = ai_ptr[j];
         ai_max_in_thread = fmaxf(ai_max_in_thread, aij);
     }
-    
+
     float ai_max_in_warp = ai_max_in_thread;
 
-    #pragma unroll
+#pragma unroll
     for (int offset = offset0; offset > 0; offset >>= 1) {
         auto ai_max_curr_lane = ai_max_in_warp;
         auto ai_max_next_lane = __shfl_down_sync(FULL, ai_max_in_warp, offset);
         ai_max_in_warp = fmaxf(ai_max_curr_lane, ai_max_next_lane);
     }
     float ai_max = __shfl_sync(FULL, ai_max_in_warp, 0);
-    
+
     float ai_sum_in_thread = 0.0;
     for (auto j = col_base; j < ncol; j += col_step) {
         float aij = ai_ptr[j];
@@ -46,7 +46,7 @@ __global__ void kernel_v4(float* out, const float* inp, int nrow, int ncol) {
     }
     float ai_sum_in_warp = ai_sum_in_thread;
 
-    #pragma unroll
+#pragma unroll
     for (int offset = offset0; offset > 0; offset >>= 1) {
         auto ai_sum_curr_lane = ai_sum_in_warp;
         auto ai_sum_next_lane = __shfl_down_sync(FULL, ai_sum_in_warp, offset);

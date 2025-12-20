@@ -9,8 +9,8 @@ __global__ void kernel_v1(float* out, const float* inp, int nrow, int ncol) {
     const auto idx_thread_in_grid = idx_block_in_grid * num_thread_in_block + idx_thread_in_block;
 
     // sanity check
-    assert (num_thread_in_block == 1);
-    assert (num_block_in_grid == nrow);
+    assert(num_thread_in_block == 1);
+    assert(num_block_in_grid == nrow);
 
     const auto i = idx_thread_in_grid;
     const auto ai_ptr = inp + i * ncol;

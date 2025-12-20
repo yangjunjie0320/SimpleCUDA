@@ -1,8 +1,9 @@
 #pragma once
 // basic utilities
-#include <cstdio>
-#include <cmath>
 #include <cuda_runtime.h>
+
+#include <cmath>
+#include <cstdio>
 #include <cub/cub.cuh>
 
 // xtensor related
@@ -23,37 +24,37 @@ using dt = std::chrono::duration<float, std::milli>;
 #define NUM_WARP_IN_BLOCK 4
 
 namespace softmax {
-    void kernel_cpu(float* out, const float* inp, const int nrow, const int ncol) {
-        for (int i = 0; i < nrow; i++) {
-            const float* ai_ptr = inp + i * ncol;
-            float* ci_ptr = out + i * ncol;
-    
-            float ai_max = -INFINITY;
-            for (int j = 0; j < ncol; j++) {
-                float aij = *(ai_ptr + j);
-                ai_max = fmaxf(ai_max, aij);
-            }
-    
-            float ai_sum = 0.0;
-            for (int j = 0; j < ncol; j++) {
-                float aij = *(ai_ptr + j);
-                float exp_aij = expf(aij - ai_max);
-                ai_sum += exp_aij;
-                *(ci_ptr + j) = exp_aij;
-            }
-    
-            for (int j = 0; j < ncol; j++) {
-                *(ci_ptr + j) /= ai_sum;
-            }
+void kernel_cpu(float* out, const float* inp, const int nrow, const int ncol) {
+    for (int i = 0; i < nrow; i++) {
+        const float* ai_ptr = inp + i * ncol;
+        float* ci_ptr = out + i * ncol;
+
+        float ai_max = -INFINITY;
+        for (int j = 0; j < ncol; j++) {
+            float aij = *(ai_ptr + j);
+            ai_max = fmaxf(ai_max, aij);
+        }
+
+        float ai_sum = 0.0;
+        for (int j = 0; j < ncol; j++) {
+            float aij = *(ai_ptr + j);
+            float exp_aij = expf(aij - ai_max);
+            ai_sum += exp_aij;
+            *(ci_ptr + j) = exp_aij;
+        }
+
+        for (int j = 0; j < ncol; j++) {
+            *(ci_ptr + j) /= ai_sum;
         }
     }
-    
-    void kernel_ref(xt::xarray<float>& out, const xt::xarray<float>& inp) {
-        xt::xarray<float> a_max = xt::amax(inp, {1}, xt::keep_dims);
-        xt::xarray<float> a_exp = xt::exp(inp - a_max);
-        xt::xarray<float> a_sum = xt::sum(a_exp, {1}, xt::keep_dims);
-        out = a_exp / a_sum;
-    }
+}
+
+void kernel_ref(xt::xarray<float>& out, const xt::xarray<float>& inp) {
+    xt::xarray<float> a_max = xt::amax(inp, {1}, xt::keep_dims);
+    xt::xarray<float> a_exp = xt::exp(inp - a_max);
+    xt::xarray<float> a_sum = xt::sum(a_exp, {1}, xt::keep_dims);
+    out = a_exp / a_sum;
+}
 }  // namespace softmax
 
 class BenchmarkResult {
@@ -95,8 +96,8 @@ class KernelLaunchConfig {
     dim3 grid_dim;
     int shared_mem_size;
 
-    KernelLaunchConfig(kernel_t kernel, const char* title, int warmup, int repeat,
-                       dim3 block_dim, dim3 grid_dim, int shared_mem_size)
+    KernelLaunchConfig(kernel_t kernel, const char* title, int warmup, int repeat, dim3 block_dim,
+                       dim3 grid_dim, int shared_mem_size)
         : kernel(kernel), title(title), warmup(warmup), repeat(repeat), block_dim(block_dim),
           grid_dim(grid_dim), shared_mem_size(shared_mem_size) {}
 

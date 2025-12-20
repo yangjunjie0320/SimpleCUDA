@@ -4,7 +4,7 @@
 __global__ void kernel_v2(float* out, const float* inp, int nrow, int ncol) {
     constexpr auto offset0 = NUM_THREAD_IN_WARP * NUM_WARP_IN_BLOCK / 2;
     const auto idx_lane = threadIdx.x;
-    
+
     const auto num_thread_in_warp = blockDim.x;
     const auto num_warp_in_block = blockDim.y;
     const auto num_thread_in_block = num_thread_in_warp * num_warp_in_block;
@@ -15,10 +15,10 @@ __global__ void kernel_v2(float* out, const float* inp, int nrow, int ncol) {
     const auto idx_thread_in_grid = threadIdx.x + blockIdx.x * blockDim.x;
 
     // sanity check
-    assert (num_warp_in_block == NUM_WARP_IN_BLOCK);
-    assert (num_thread_in_block == NUM_THREAD_IN_WARP * NUM_WARP_IN_BLOCK);
-    assert (num_thread_in_block == ncol && num_block_in_grid == nrow);
-    
+    assert(num_warp_in_block == NUM_WARP_IN_BLOCK);
+    assert(num_thread_in_block == NUM_THREAD_IN_WARP * NUM_WARP_IN_BLOCK);
+    assert(num_thread_in_block == ncol && num_block_in_grid == nrow);
+
     const auto i = idx_block_in_grid;
     const auto j = idx_thread_in_block;
     const float* ai_ptr = inp + i * ncol;
@@ -42,7 +42,7 @@ __global__ void kernel_v2(float* out, const float* inp, int nrow, int ncol) {
     float ai_max_in_block = smem[0];
     float ai_max = ai_max_in_block;
     __syncthreads();
-    
+
     float exp_aij = expf(aij - ai_max);
     smem[idx_thread_in_block] = exp_aij;
     __syncthreads();
