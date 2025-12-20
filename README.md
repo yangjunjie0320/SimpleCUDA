@@ -44,10 +44,7 @@ Run the `softmax` example:
 
 Use `ncu` to profile the CUDA kernel:
 ```bash
-ncu \
-  --kernel-name kernel_v4 \
-  --launch-skip 500 \
-  --launch-count 1 \
-  --target-processes all \
-  ./build/softmax.x > profile.log
+ncu --set detailed \
+  --launch-skip 600 --launch-count 1 \
+  --kernel-name kernel_v5 ./build/softmax.x
 ```

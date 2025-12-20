@@ -1,28 +1,24 @@
-#include <cuda_runtime.h>
-
-#include <cmath>
-
 #include "utils.cu"
 
 template <int num_rows_per_access, int num_cols_per_thread>
-__global__ void kernel_v5(float* out, const float* inp, int nrow, int ncol) {
-    float buff[num_rows_per_access][num_cols_per_thread];
-
-    // const auto lane_idx = threadIdx.x;
-    // const auto warp_idx_in_block = threadIdx.y;
-    // const auto num_warps_per_block = blockDim.y;
-
-    // const auto warp_idx_global = blockIdx.x * num_warps_per_block + warp_idx_in_block;
-    // const auto num_warps_per_grid = gridDim.x * num_warps_per_block;
-
-    // const auto a_
-    const auto idx_lane = threadIdx.x;
-    const auto idx_warp_in_block = threadIdx.y;
-
+__global__ void kernel_v6(float* out, const float* inp, int nrow, int ncol) {
+    const auto num_thread_in_warp = blockDim.x;
     const auto num_warp_in_block = blockDim.y;
-    const auto idx_warp_in_grid = blockIdx.x * num_warp_in_block + idx_warp_in_block;
-    const auto num_warp_in_grid = gridDim.x * num_warp_in_block;
+    const auto num_block_in_grid = gridDim.x;
 
+    const auto idx_lane = threadIdx.x;
+    const auto idx_block_in_grid = blockIdx.x;
+    const auto idx_warp_in_block = threadIdx.y;
+    const auto idx_warp_in_grid = idx_block_in_grid * num_warp_in_block + idx_warp_in_block;
+    const auto num_warp_in_grid = num_block_in_grid * num_warp_in_block;
+    constexpr auto offset0 = NUM_THREAD_IN_WARP / 2;
+
+    // sanity check
+    assert(num_thread_in_warp == NUM_THREAD_IN_WARP);
+    assert(num_warp_in_block == NUM_WARP_IN_BLOCK);
+    assert(offset0 * 2 == num_thread_in_warp);
+
+    float buff[num_rows_per_access][num_cols_per_thread];
     const auto row_base = idx_warp_in_grid * num_rows_per_access;
     const auto row_step = num_warp_in_grid * num_rows_per_access;
     const auto col_step = NUM_THREAD_IN_WARP;

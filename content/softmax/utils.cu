@@ -61,6 +61,7 @@ class BenchmarkResult {
   public:
     float time_cpu_ms;
     float time_gpu_ms;
+    float tol;
     xt::xarray<float> error_cpu;
     xt::xarray<float> error_gpu;
     const char* title;
@@ -74,13 +75,15 @@ class BenchmarkResult {
 
         if (cpu) {
             auto error = xt::amax(this->error_cpu)();
-            printf("\n%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n", "softmax_f32_cpu",
-                   nrow, time_cpu_ms, error);
+            const char* marker = (error < this->tol) ? " " : "*";
+            printf("\n%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e %s\n", "softmax_f32_cpu",
+                   nrow, time_cpu_ms, error, marker);
         }
         if (gpu) {
             auto error = xt::amax(this->error_gpu)();
-            printf("%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e\n", this->title, nrow,
-                   time_gpu_ms, error);
+            const char* marker = (error < this->tol) ? " " : "*";
+            printf("%-16s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e %s\n", this->title, nrow,
+                   time_gpu_ms, error, marker);
         }
     }
 };
@@ -92,19 +95,19 @@ class KernelLaunchConfig {
     const char* title;
     int warmup;
     int repeat;
+    float tol;
     dim3 block_dim;
     dim3 grid_dim;
     int shared_mem_size;
 
     KernelLaunchConfig(kernel_t kernel, const char* title, int warmup, int repeat, dim3 block_dim,
-                       dim3 grid_dim, int shared_mem_size)
+                       dim3 grid_dim, int shared_mem_size, float tol)
         : kernel(kernel), title(title), warmup(warmup), repeat(repeat), block_dim(block_dim),
-          grid_dim(grid_dim), shared_mem_size(shared_mem_size) {}
+          grid_dim(grid_dim), shared_mem_size(shared_mem_size), tol(tol) {}
 
-    KernelLaunchConfig(kernel_t kernel, const char* title, dim3 block_dim, dim3 grid_dim,
-                       int shared_mem_size)
+    KernelLaunchConfig(kernel_t kernel, const char* title, dim3 block_dim, dim3 grid_dim)
         : kernel(kernel), title(title), warmup(10), repeat(100), block_dim(block_dim),
-          grid_dim(grid_dim), shared_mem_size(shared_mem_size) {}
+          grid_dim(grid_dim), shared_mem_size(0), tol(1e-6) {}
 
     BenchmarkResult run(const xt::xarray<float>& inp) {
         const int nrow = inp.shape(0);
@@ -185,6 +188,7 @@ class KernelLaunchConfig {
         result.error_cpu = xt::abs(out_ref - out_cpu);
         result.error_gpu = xt::abs(out_ref - out_gpu);
         result.title = this->title;
+        result.tol = this->tol;
         return result;
     }
 };
