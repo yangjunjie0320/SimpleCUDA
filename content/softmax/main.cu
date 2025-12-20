@@ -48,7 +48,7 @@ int main() {
         result = config.run(inp);
         result.print(false, true);
 
-        const int num_rows_per_access = 2;
+        const int num_rows_per_access = 4;
         const int num_cols_per_thread = NUM_WARP_IN_BLOCK;
         auto num_warp_in_grid = (nrow + num_rows_per_access - 1) / num_rows_per_access;
         num_block_in_grid = (num_warp_in_grid + NUM_WARP_IN_BLOCK - 1) / NUM_WARP_IN_BLOCK;
