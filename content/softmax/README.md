@@ -15,6 +15,15 @@ done
 The kernels are running with random generated input data of (nrow, NUM_WARP_IN_BLOCK * NUM_THREAD_IN_WARP).
 In which `NUM_WARP_IN_BLOCK` is 4 and `NUM_THREAD_IN_WARP` is 32.
 
+- SM是 GPU 的基本执行单元，有固定资源限制：最大一起活跃的 warp 数、block/thread 数、使用的寄存器与共享内存都有限制。
+- occupancy = 活跃 warp 数 / SM 支持的最大 warp 数，反映 SM 并行利用程度。
+- SM 同时能驻留的 blocks 数由这些资源共同决定：最大 block 限制、寄存器使用、共享内存使用等，取最小的约束值。
+- Block 太小时，每个 block 的 warp 数少，驻留 block 数量被最大 block 限制；活跃 warp 总数小，occupancy 低。
+- Block 太大时，内部同步或依赖会造成 warp 等待，这种执行延迟不会反映在 occupancy 上，但会降低性能。
+- 寄存器使用量、共享内存使用量直接影响可驻留的 thread/warp 数，高资源需求会降低并发度。
+- 高占用率有助于隐藏延迟，但真正性能还依赖于内存访问效率、分支发散等因素。
+- 每个线程的 workload 应均匀且适中：太小浪费调度资源，太大则可能占用过多资源降低并发。
+
 ## Kernels
 
 - `kernel_v1`: each block handles one row, 1 thread, naive serial implementation
