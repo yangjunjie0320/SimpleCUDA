@@ -17,14 +17,22 @@ __global__ void kernel_v1(float* out, const float* inp, int nrow, int ncol) {
     assert(num_block_in_grid == nrow && num_thread_in_block == ncol);
 
     const auto i = idx_block_in_grid;
-    const auto j = idx_thread_in_block;
     const float* ai_ptr = inp + i * ncol;
-    const float aij = ai_ptr[j];
+
+    const auto col_base = idx_thread_in_block;
+    const auto col_step = num_thread_in_block;
+
+    float ai_sum_in_thread = 0.0;
+    for (auto j = col_base; j < ncol; j += col_step) {
+        const float aij = ai_ptr[j];
+        ai_sum_in_thread += aij;
+    }
 
     extern __shared__ float buff[];
-    buff[j] = aij;
+    buff[col_base] = ai_sum_in_thread;
     __syncthreads();
 
+    const auto j = col_base;
     const auto offset0 = 1;
     for (int offset = offset0; offset < num_thread_in_block; offset *= 2) {
         if (j % (offset * 2) == 0) {

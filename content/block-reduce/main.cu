@@ -12,13 +12,15 @@ namespace block_reduce {
 }  // namespace block_reduce
 
 int main() {
-    for (int n = 64; n <= 2048; n *= 2) {
-        const int nrow = n;
-        const int ncol = n;
+    const int nrow = 1024;
+    for (int ncol = 1024; ncol <= 1024 * 8; ncol *= 2) {
         const xt::xarray<float> inp = xt::random::randn<float>({nrow, ncol});
 
         int num_block_in_grid = nrow;
         int num_warp_in_block = ncol / NUM_THREAD_IN_WARP;
+        if (num_warp_in_block > NUM_THREAD_IN_WARP) {
+            num_warp_in_block = NUM_THREAD_IN_WARP;
+        }
         int num_thread_in_block = num_warp_in_block * NUM_THREAD_IN_WARP;
         assert(num_thread_in_block == ncol);
         auto block_dim = dim3(NUM_THREAD_IN_WARP, num_warp_in_block);
