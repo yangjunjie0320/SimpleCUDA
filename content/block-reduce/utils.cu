@@ -21,7 +21,8 @@ using dt = std::chrono::duration<float, std::milli>;
 // constants
 #define FULL 0xffffffff
 #define NUM_THREAD_IN_WARP 32
-// #define NUM_WARP_IN_BLOCK 4
+#define NUM_THREAD_IN_BLOCK_MAX 1024
+#define NUM_WARP_IN_BLOCK_MAX 32
 
 namespace block_reduce {
 void kernel_cpu(float* out, const float* inp, const int nrow, const int ncol) {
@@ -49,6 +50,7 @@ class BenchmarkResult {
     float time_cpu_ms;
     float time_gpu_ms;
     float tol;
+    xt::xarray<float> inp;
     xt::xarray<float> error_cpu;
     xt::xarray<float> error_gpu;
     const char* title;
@@ -58,18 +60,19 @@ class BenchmarkResult {
         auto time_gpu_ms = this->time_gpu_ms;
         auto error_cpu = xt::amax(this->error_cpu);
         auto error_gpu = xt::amax(this->error_gpu);
-        auto nrow = this->error_cpu.shape(0);
+        auto nrow = this->inp.shape(0);
+        auto ncol = this->inp.shape(1);
 
         if (cpu) {
             auto error = xt::amax(this->error_cpu)();
             const char* marker = (error < this->tol) ? " " : "*";
-            printf("\n%-20s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e %s\n",
-                   "block_reduce_f32_cpu", nrow, time_cpu_ms, error, marker);
+            printf("\n%-32s, ncol: %6zu, time: %-6.2e ms,  error: %-6.2e %s\n",
+                   "block_reduce_f32_cpu", ncol, time_cpu_ms, error, marker);
         }
         if (gpu) {
             auto error = xt::amax(this->error_gpu)();
             const char* marker = (error < this->tol) ? " " : "*";
-            printf("%-20s, nrow: %6zu, time: %-6.2e ms,  error: %-6.2e %s\n", this->title, nrow,
+            printf("%-32s, ncol: %6zu, time: %-6.2e ms,  error: %-6.2e %s\n", this->title, ncol,
                    time_gpu_ms, error, marker);
         }
     }
@@ -141,6 +144,12 @@ class KernelLaunchConfig {
         }
         cudaDeviceSynchronize();
 
+        const cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            printf("Warmup failed: %s\n", cudaGetErrorString(err));
+            exit(1);
+        }
+
         // Timing the CUDA execution
         cudaEvent_t t0, t1;
         cudaEventCreate(&t0);
@@ -172,6 +181,7 @@ class KernelLaunchConfig {
         auto result = BenchmarkResult();
         result.time_cpu_ms = time_cpu_ms;
         result.time_gpu_ms = time_gpu_ms;
+        result.inp = inp;
         result.error_cpu = xt::abs(out_ref - out_cpu);
         result.error_gpu = xt::abs(out_ref - out_gpu);
         result.title = this->title;

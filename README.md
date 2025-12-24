@@ -24,11 +24,6 @@ conda env create -f environment.yml -n simple-cuda
 conda activate simple-cuda
 ```
 
-If you are using WSL2, you can fetch the `nvidia-smi` command from:
-```bash
-alias "nvidia-smi"="/usr/lib/wsl/lib/nvidia-smi"
-```
-
 Check the CUDA architecture:
 ```bash
 nvidia-smi --query-gpu=name,compute_cap --format=csv
@@ -44,7 +39,7 @@ export CUDAARCHS=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader --id
 ```bash
 rm -rf build
 cmake -B build -DENABLE_DEBUG=$ENABLE_DEBUG
-cmake --build build
+cmake --build build --parallel
 ```
 
 ## Format Check

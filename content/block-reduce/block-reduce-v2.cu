@@ -14,27 +14,34 @@ __global__ void kernel_v2(float* out, const float* inp, int nrow, int ncol) {
     // sanity check
     assert(num_thread_in_warp == NUM_THREAD_IN_WARP);
     assert(num_thread_in_block == NUM_THREAD_IN_WARP * num_warp_in_block);
-    assert(num_block_in_grid == nrow && num_thread_in_block * 2 == ncol);
+    assert(num_block_in_grid == nrow);
 
     const auto i = idx_block_in_grid;
-    const auto j = idx_thread_in_block;
     const float* ai_ptr = inp + i * ncol;
-    const float aij = ai_ptr[j];
+
+    const auto col_base = idx_thread_in_block;
+    const auto col_step = num_thread_in_block;
+
+    float ai_sum_in_thread = 0.0;
+    for (auto j = col_base; j < ncol; j += col_step) {
+        const float aij = ai_ptr[j];
+        ai_sum_in_thread += aij;
+    }
 
     extern __shared__ float buff[];
-    buff[j] = aij + ai_ptr[j + num_thread_in_block];
+    buff[col_base] = ai_sum_in_thread;
     __syncthreads();
 
-    const auto offset0 = 1;
-    for (int offset = offset0; offset < num_thread_in_block; offset *= 2) {
-        if (j % (offset * 2) == 0) {
-            float ai_curr_thread = buff[j];
-            float ai_next_thread = buff[j + offset];
+    const auto j = col_base;
+    const auto offset0 = num_thread_in_block / 2;
+    for (int offset = offset0; offset > 0; offset >>= 1) {
+        if (j < offset) {
+            const float ai_curr_thread = buff[j];
+            const float ai_next_thread = buff[j + offset];
             buff[j] = ai_curr_thread + ai_next_thread;
         }
         __syncthreads();
     }
-    __syncthreads();
 
     if (j == 0) {
         out[i] = buff[0];
